@@ -4,7 +4,7 @@ Research Paper Assistant built with Flask and Gemini. Upload PDFs, extract abstr
 
 
 **1. Clone the Repo**
-git clone https://github.com/your-username/flask-research-assistant.git
+git clone https://github.com/Nagakrishnasree/flask-research-assistant.git
 cd flask-research-assistant
 
 **2. Install Dependencies**
