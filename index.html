@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Research Paper Assistant</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: #fff3e0;
+            color: #4e342e;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: #ffffff;
+            padding: 30px 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #e65100;
+        }
+
+        h2 {
+            color: #bf360c;
+            margin-top: 40px;
+        }
+
+        form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        input[type="file"], input[type="text"] {
+            padding: 10px;
+            border: 1px solid #ffcc80;
+            border-radius: 6px;
+            width: 100%;
+            max-width: 400px;
+            background-color: #fff8e1;
+        }
+
+        button {
+            background: #ffb74d;
+            color: #4e342e;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #f57c00;
+        }
+
+        #upload-message {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        #response-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        #response-label {
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        #response-area {
+            background: #ffe0b2;
+            padding: 15px;
+            border-radius: 6px;
+            white-space: pre-line;
+        }
+
+        @media screen and (max-width: 600px) {
+            .container {
+                margin: 20px;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Research Paper Assistant</h1>
+
+        <form id="upload-form" enctype="multipart/form-data" method="post">
+            <input type="file" name="file" id="file-input" required>
+            <button type="submit">Upload</button>
+        </form>
+
+        <div id="upload-message"></div>
+
+        <h2>Ask a question</h2>
+        <input type="text" id="query-input" placeholder="Enter your question" required>
+        <button onclick="sendQuery()">Ask</button>
+
+        <div id="response-container">
+            <p id="response-label">Response:</p>
+            <div id="response-area"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('upload-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('file-input');
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            const res = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await res.json();
+            const msg = result.message || result.error;
+            const msgBox = document.getElementById('upload-message');
+            msgBox.innerText = msg;
+            msgBox.style.color = result.message ? 'green' : 'red';
+        });
+
+        async function sendQuery() {
+            const query = document.getElementById('query-input').value;
+            if (!query.trim()) return;
+
+            const res = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+
+            const result = await res.json();
+            document.getElementById('response-container').style.display = 'block';
+            document.getElementById('response-area').innerText = result.response || result.error;
+        }
+    </script>
+</body>
+</html>
