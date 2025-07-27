@@ -1,10 +1,20 @@
+'''
+Research paper Assistant which help to extract the content from the provided context and store the information in database
+functions:
+1.extract_text_from_pdf -- extracting the text from uploaded document
+2.sanitize_db_name -- defines the database name
+3.upload_file -- uploading the documents into database and creating new instance if not exists
+4.chat -- invokes the llm 
+5.index -- routes to home page 
+'''
+
+#Imports
 import os
 import tempfile
 from flask import Flask, request, jsonify, render_template
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import PyPDF2
-
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
@@ -25,11 +35,13 @@ embeddings = GoogleGenerativeAIEmbeddings(model="embeddings-model")
 llm = ChatGoogleGenerativeAI(model="model-name", temperature=0.7)
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 
+#function to extract text from pdf file
 def extract_text_from_pdf(file_path):
     with open(file_path, "rb") as f:
         pdf_reader = PyPDF2.PdfReader(f)
         return ''.join(page.extract_text() or "" for page in pdf_reader.pages)
 
+#Intial page
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -37,9 +49,11 @@ def index():
 import mysql.connector
 import re
 
+#function to define database name
 def sanitize_db_name(name):
     return re.sub(r'\W+', '_', name).lower()
 
+#function to upload pdf file , storing the file in database
 @app.route('/upload', methods=['POST'])
 def upload_file():
     global documents, vectorstore, bm25_retriever
@@ -55,18 +69,18 @@ def upload_file():
     file.save(file_path)
 
     try:
-        # 🧾 Extract content
+        # Extract content
         if filename.lower().endswith('.pdf'):
             text = extract_text_from_pdf(file_path)
         else:
             text = file.read().decode('utf-8')
 
-        # 🧠 Embed text into LangChain docs
+        #  Embed text into LangChain docs
         chunks = text_splitter.split_text(text)
         doc_objects = [Document(page_content=chunk) for chunk in chunks]
         documents.extend(doc_objects)
 
-        # 🔍 Build vector store
+        # intitiate vector store
         if vectorstore is None:
             vectorstore = FAISS.from_documents(doc_objects, embeddings)
         else:
@@ -75,10 +89,10 @@ def upload_file():
         texts = [doc.page_content for doc in documents]
         bm25_retriever = BM25Retriever.from_texts(texts, metadatas=[{} for _ in texts])
 
-        # 🧠 Basic abstract extraction (first 500 chars)
+        # Basic abstract extraction (first 500 chars)
         abstract = text.strip().replace('\n', ' ')[:500]
 
-        # 🗄️ MySQL: Create DB + Table + Insert record
+        # MySQL: Create DB + Table + Insert record
         conn = mysql.connector.connect(host="localhost", user="root", password="Ammu@3851")
         cursor = conn.cursor()
 
@@ -107,7 +121,7 @@ def upload_file():
     except Exception as e:
         return jsonify({'error': f'Error processing file: {str(e)}'}), 500
 
-
+#function to retrieve the documents, invoking the prompt
 @app.route('/chat', methods=['POST'])
 def chat():
     global documents, vectorstore, bm25_retriever
@@ -128,21 +142,22 @@ def chat():
         relevant_docs = ensemble_retriever.get_relevant_documents(query)
         context = "\n\n".join([doc.page_content for doc in relevant_docs])
 
-        prompt = f"""You are a helpful research assistant. Answer the question based on the provided research paper context.
+        prompt = f"""Act as a research assistant. Answer the question based on the provided research paper context.
 
-Context:
-{context}
-
-Question: {query}
-
-Answer:"""
-
+        Context:
+        {context}
+        
+        Question: {query}
+        
+        Answer:"""
+        
         response = llm.invoke(prompt)
         return jsonify({'response': response.content})
 
     except Exception as e:
         return jsonify({'error': f'Error generating response: {str(e)}'}), 500
 
+#Main function
 if __name__ == '__main__':
     if not os.getenv("GOOGLE_API_KEY"):
         raise EnvironmentError("Please set the GOOGLE_API_KEY environment variable.")
