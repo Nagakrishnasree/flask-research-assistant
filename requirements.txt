@@ -1,0 +1,10 @@
+flask
+flask-cors
+werkzeug
+google-generativeai
+langchain
+langchain-google-genai
+faiss-cpu
+rank-bm25
+PyPDF2
+python-dotenv
